@@ -1,0 +1,8 @@
+[general]
+# Ignore certain rules (comma-separated list), you can reference them by
+# their id or by their full name
+ignore=body-is-missing,body-max-line-length
+
+# Contrib rules are community-contributed rules that are disabled by default,
+# but can be enabled through configuration.
+contrib=contrib-title-conventional-commits
