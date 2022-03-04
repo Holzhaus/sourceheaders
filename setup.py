@@ -31,6 +31,7 @@ setup(
     package_data={
         "sourceheaders": ["*.json"],
     },
+    test_suite="tests",
     entry_points={
         "console_scripts": ["sourceheaders=sourceheaders:main"],
     },
