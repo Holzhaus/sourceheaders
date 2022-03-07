@@ -1,0 +1,10 @@
+[language.c]
+extensions = [".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hxx"]
+block_comment = { start = "/* ", line = " * ", end = " */" }
+inline_comment = "// "
+
+[language.python]
+extensions = [".py"]
+block_comment = { start = '"""', end = '"""' }
+inline_comment = "# "
+skip_line = "^#!|^# +-\\*-|^# +(?:pylint|pyright|coding|encoding|type|flake8):"

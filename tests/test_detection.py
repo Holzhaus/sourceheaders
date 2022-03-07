@@ -12,7 +12,7 @@ class HeaderDetectionTest(unittest.TestCase):
         self.config.read_default()
 
     def replace(self, content: str, expected: str, ext: str):
-        lang = self.config.extensions[ext]
+        lang = self.config.get_language(ext)
         content = textwrap.dedent(content.strip("\n"))
         expected = textwrap.dedent(expected.strip("\n"))
         replacement = "This is the replacement."

@@ -28,8 +28,9 @@ setup(
     version="0.0.1",
     license="MIT",
     packages=["sourceheaders"],
+    install_requires=["toml"],
     package_data={
-        "sourceheaders": ["*.json"],
+        "sourceheaders": ["*.toml"],
     },
     test_suite="tests",
     entry_points={

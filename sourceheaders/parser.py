@@ -32,6 +32,14 @@ class LineRange(NamedTuple):
     end: int
 
 
+class BlockComment(NamedTuple):
+    """Block comment style."""
+
+    start: Optional[str]
+    line: Optional[str]
+    end: Optional[str]
+
+
 class HeaderComment(NamedTuple):
     """A parsed file header comment."""
 
@@ -49,9 +57,7 @@ class LanguageInfo:
     """Defined a comment style."""
 
     inline_comment: Optional[str] = None
-    block_comment_start: Optional[str] = None
-    block_comment_line: Optional[str] = None
-    block_comment_end: Optional[str] = None
+    block_comment: Optional[BlockComment] = None
     skip_line: Optional[re.Pattern[str]] = None
 
     def _should_skip_line(self, line: str) -> bool:
@@ -81,8 +87,10 @@ class LanguageInfo:
                     continue
 
                 if (
-                    content := parse_header_line(line, self.block_comment_start)
-                ) is not None:
+                    self.block_comment
+                    and (content := parse_header_line(line, self.block_comment.start))
+                    is not None
+                ):
                     # File starts with an block-style comment.
                     is_block = True
                     yield (i, is_block, content)
@@ -99,26 +107,27 @@ class LanguageInfo:
                 assert is_block is not None
             elif is_block:
                 # Read continuation lines of block-style comment.
+                assert self.block_comment is not None
                 assert (
-                    self.block_comment_line is not None
-                    or self.block_comment_end is not None
+                    self.block_comment.line is not None
+                    or self.block_comment.end is not None
                 )
                 if (
-                    self.block_comment_end is not None
-                    and (content := parse_header_line(line, self.block_comment_end))
+                    self.block_comment.end is not None
+                    and (content := parse_header_line(line, self.block_comment.end))
                     is not None
                 ):
                     # Block comment ends here.
                     yield (i, is_block, content)
                     return
 
-                if self.block_comment_line is None:
+                if self.block_comment.line is None:
                     # Block comment continues here, but there is no prefix for
                     # inidivual lines (e.g. for Python-style multiline
                     # comments).
                     yield (i, is_block, line)
                 elif (
-                    content := parse_header_line(line, self.block_comment_line)
+                    content := parse_header_line(line, self.block_comment.line)
                 ) is not None:
                     # Block comment continues here.
                     yield (i, is_block, content)

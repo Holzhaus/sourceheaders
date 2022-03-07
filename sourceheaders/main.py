@@ -24,9 +24,9 @@ def main(argv: Optional["Sequence[str]"] = None) -> int:
 
     for path in args.file:
         try:
-            lang = config.extensions[path.suffix]
-        except KeyError:
-            logger.warning("Failed to detect comment style for %s", path)
+            lang = config.get_language(extension=path.suffix)
+        except LookupError:
+            logger.warning("Failed to detect comment style for %s", path, exc_info=True)
             continue
 
         with path.open("r", encoding="utf-8") as fp:
