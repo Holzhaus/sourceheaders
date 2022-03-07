@@ -94,7 +94,22 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         self.replace(before, after, ".py")
 
-    def test_python_block(self):
+    def test_python_block_single(self):
+        before = '''
+        """ This is the original. """
+
+        if __name__ == "__main__":
+            pass
+        '''
+        after = """
+        # This is the replacement.
+
+        if __name__ == "__main__":
+            pass
+        """
+        self.replace(before, after, ".py")
+
+    def test_python_multi(self):
         before = '''
         """
         This is the original.

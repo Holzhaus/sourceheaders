@@ -9,7 +9,7 @@ import textwrap
 from typing import Iterable, NamedTuple, Optional
 
 
-def parse_header_line(line: str, prefix: Optional[str]) -> Optional[str]:
+def parse_prefixed_line(line: str, prefix: Optional[str]) -> Optional[str]:
     """
     Return a `line` without `prefix` if `line` starts with `prefix`, else return `None`.
     """
@@ -19,7 +19,23 @@ def parse_header_line(line: str, prefix: Optional[str]) -> Optional[str]:
     if line.startswith(prefix):
         return line.removeprefix(prefix)
 
-    if line == prefix.rstrip():
+    if line == prefix.strip():
+        return ""
+
+    return None
+
+
+def parse_suffixed_line(line: str, suffix: Optional[str]) -> Optional[str]:
+    """
+    Return a `line` without `suffix` if `line` starts with `suffix`, else return `None`.
+    """
+    if suffix is None:
+        return None
+
+    if line.endswith(suffix):
+        return line.removesuffix(suffix)
+
+    if line == suffix.strip():
         return ""
 
     return None
@@ -88,14 +104,21 @@ class LanguageInfo:
 
                 if (
                     self.block_comment
-                    and (content := parse_header_line(line, self.block_comment.start))
+                    and (content := parse_prefixed_line(line, self.block_comment.start))
                     is not None
                 ):
                     # File starts with an block-style comment.
                     is_block = True
+
+                    # The block-style comment may end in the same line.
+                    if line := parse_suffixed_line(content, self.block_comment.end):
+                        # Block comment ends here.
+                        yield (i, is_block, line)
+                        return
+
                     yield (i, is_block, content)
                 elif (
-                    content := parse_header_line(line, self.inline_comment)
+                    content := parse_prefixed_line(line, self.inline_comment)
                 ) is not None:
                     # File starts with an block-style comment.
                     is_block = False
@@ -114,7 +137,7 @@ class LanguageInfo:
                 )
                 if (
                     self.block_comment.end is not None
-                    and (content := parse_header_line(line, self.block_comment.end))
+                    and (content := parse_suffixed_line(line, self.block_comment.end))
                     is not None
                 ):
                     # Block comment ends here.
@@ -127,7 +150,7 @@ class LanguageInfo:
                     # comments).
                     yield (i, is_block, line)
                 elif (
-                    content := parse_header_line(line, self.block_comment.line)
+                    content := parse_prefixed_line(line, self.block_comment.line)
                 ) is not None:
                     # Block comment continues here.
                     yield (i, is_block, content)
@@ -136,7 +159,7 @@ class LanguageInfo:
             else:
                 # Read continuation lines of inline-style comment.
                 if (
-                    content := parse_header_line(line, self.inline_comment)
+                    content := parse_prefixed_line(line, self.inline_comment)
                 ) is not None:
                     yield (i, is_block, content)
                 else:
