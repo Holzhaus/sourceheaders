@@ -5,6 +5,12 @@ import unittest
 
 from sourceheaders.config import Config
 
+HEADER_TEXT = """
+This is the replacement.
+
+It has two paragraphs, one of which contains a very long line that needs to be split into into multiple lines.
+""".strip()
+
 
 class HeaderDetectionTest(unittest.TestCase):
     def setUp(self):
@@ -15,7 +21,7 @@ class HeaderDetectionTest(unittest.TestCase):
         lang = self.config.get_language(ext)
         content = textwrap.dedent(content.strip("\n"))
         expected = textwrap.dedent(expected.strip("\n"))
-        replacement = "This is the replacement."
+        replacement = lang.format_header(HEADER_TEXT, width=70, prefer_inline=True)
         (_replaced, actual) = lang.set_header(content, replacement)
         self.assertEqual(expected, actual)
 
@@ -27,6 +33,9 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         after = """
         // This is the replacement.
+        //
+        // It has two paragraphs, one of which contains a very long line that
+        // needs to be split into into multiple lines.
 
         int main() {}
         """
@@ -42,6 +51,9 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         after = """
         // This is the replacement.
+        //
+        // It has two paragraphs, one of which contains a very long line that
+        // needs to be split into into multiple lines.
 
         int main() {}
         """
@@ -57,6 +69,9 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         after = """
         // This is the replacement.
+        //
+        // It has two paragraphs, one of which contains a very long line that
+        // needs to be split into into multiple lines.
 
         int main() {}
         """
@@ -71,6 +86,9 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         after = """
         # This is the replacement.
+        #
+        # It has two paragraphs, one of which contains a very long line that
+        # needs to be split into into multiple lines.
 
         if __name__ == "__main__":
             pass
@@ -88,6 +106,9 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         after = """
         # This is the replacement.
+        #
+        # It has two paragraphs, one of which contains a very long line that
+        # needs to be split into into multiple lines.
 
         if __name__ == "__main__":
             pass
@@ -103,6 +124,9 @@ class HeaderDetectionTest(unittest.TestCase):
         '''
         after = """
         # This is the replacement.
+        #
+        # It has two paragraphs, one of which contains a very long line that
+        # needs to be split into into multiple lines.
 
         if __name__ == "__main__":
             pass
@@ -120,6 +144,9 @@ class HeaderDetectionTest(unittest.TestCase):
         '''
         after = """
         # This is the replacement.
+        #
+        # It has two paragraphs, one of which contains a very long line that
+        # needs to be split into into multiple lines.
 
         if __name__ == "__main__":
             pass

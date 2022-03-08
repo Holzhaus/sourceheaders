@@ -1,3 +1,14 @@
+[general]
+prefer_inline = false
+header_pattern = "(?:Copyright|\\(c\\)|All rights reserved.|SPDX-License-Identifier:)"
+header_template = """\
+Copyright (c) {year} {copyright_holder}
+
+All rights reserved.\
+"""
+copyright_holder = ""
+spdx_license_identifier = ""
+
 [language.c]
 extensions = [".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hxx"]
 block_comment = { start = "/* ", line = " * ", end = " */" }

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Configuration class. """
+import datetime
 import os.path
 import re
 from typing import IO, Any
@@ -100,6 +101,24 @@ class Config:
             inline_comment=inline_comment,
             skip_line=skip_line,
         )
+
+    def get_header_text(self) -> str:
+        """
+        Return the configured header text.
+        """
+        header_text = (
+            self.get("header_template")
+            .format(
+                year=datetime.date.today().year,
+                copyright_holder=self.get("copyright_holder", ""),
+            )
+            .strip()
+        )
+
+        if spdx_license_identifier := self.get("spdx_license_identifier"):
+            header_text += f"\n\nSPDX-License-Identifier: {spdx_license_identifier}"
+
+        return header_text
 
     def get(self, option: str, fallback: Any = None) -> Any:
         """Get a config value for the given key."""

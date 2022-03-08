@@ -189,21 +189,50 @@ class LanguageInfo:
         assert len(lines) > 0
         return HeaderComment(is_block=header_is_block, linerange=linerange, lines=lines)
 
-    def set_header(self, text: str, header_text: str) -> tuple[bool, str]:
+    def format_header(
+        self, text: str, width: int, prefer_inline: bool
+    ) -> Iterable[str]:
+        """Return `text` formatted as a header comment."""
+        if prefer_inline and self.inline_comment or not self.block_comment:
+            is_block = False
+            line_prefix = self.inline_comment or ""
+        else:
+            is_block = True
+            line_prefix = self.block_comment.line or ""
+
+            if self.block_comment.start:
+                yield self.block_comment.start.rstrip()
+
+        paragraphs = text.split("\n\n")
+        for i, paragraph in enumerate(paragraphs, start=1):
+            yield from (
+                line.rstrip()
+                for line in textwrap.wrap(
+                    paragraph,
+                    width=width,
+                    initial_indent=line_prefix,
+                    subsequent_indent=line_prefix,
+                )
+            )
+            if i < len(paragraphs):
+                yield line_prefix.rstrip()
+
+        if is_block:
+            assert self.block_comment is not None
+            if self.block_comment.end:
+                yield self.block_comment.end.rstrip()
+
+    def set_header(self, text: str, header_lines: Iterable[str]) -> tuple[bool, str]:
         """
         Set the header comment of `text` to `header_text`.
         """
-        old_lines = iter(text.splitlines())
+        old_lines = iter(text.splitlines(keepends=True))
         if text.endswith("\n"):
             old_lines = itertools.chain(old_lines, ("",))
 
-        lines = textwrap.wrap(
-            header_text,
-            initial_indent=self.inline_comment or "",
-            subsequent_indent=self.inline_comment or "",
-        )
         replaced = False
-        if (old_header := self.find_header(text)) is not None:
+        old_header = self.find_header(text)
+        if old_header is not None:
             lines_before = itertools.islice(old_lines, old_header.linerange.start)
             skip = old_header.linerange.end - old_header.linerange.start + 1
             lines_after = itertools.islice(old_lines, skip, None)
@@ -212,5 +241,7 @@ class LanguageInfo:
             old_lines1, old_lines2 = itertools.tee(old_lines)
             lines_before = filter(self._should_skip_line, old_lines1)
             lines_after = itertools.filterfalse(self._should_skip_line, old_lines2)
-        lines = itertools.chain(lines_before, lines, lines_after)
-        return (replaced, "\n".join(lines))
+
+        header_lines = map(lambda line: line + "\n", header_lines)
+        lines = itertools.chain(lines_before, header_lines, lines_after)
+        return (replaced, "".join(lines))
