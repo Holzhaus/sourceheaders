@@ -14,13 +14,27 @@ if TYPE_CHECKING:
 def main(argv: Optional["Sequence[str]"] = None) -> int:
     """Main entry point."""
 
+    logging.basicConfig(format="%(message)s")
+
+    logger = logging.getLogger(__name__)
+
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=pathlib.Path,
+        default=pathlib.Path.cwd().joinpath(".sourceheaders.toml"),
+    )
     parser.add_argument("file", nargs="+", type=pathlib.Path)
     args = parser.parse_args(argv)
 
     config = Config()
     config.read_default()
-    logger = logging.getLogger(__name__)
+    if not args.config.exists():
+        logger.error("Configuration file does not exist: %s", args.config)
+        return 1
+
+    config.read(str(args.config))
 
     for path in args.file:
         try:
