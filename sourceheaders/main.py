@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def main(argv: Optional["Sequence[str]"] = None) -> int:
     """Main entry point."""
 
-    logging.basicConfig(format="%(message)s")
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
 
     logger = logging.getLogger(__name__)
 
