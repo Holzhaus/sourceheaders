@@ -368,3 +368,23 @@ class LanguageInfo:
         header_lines = map(lambda line: line + "\n", header_lines)
         lines = itertools.chain(lines_before, header_lines, lines_after)
         return (replaced, "".join(lines))
+
+    def update_header(self, text: str) -> tuple[bool, str]:
+        """
+        Update the header in `text` and return tuple `(replaced, new_text)`.
+        """
+        old_header = self.find_header(text)
+        header_text = self.format_header(
+            text=self.get_header_text(
+                copyright_years=old_header.copyright_years if old_header else None,
+                copyright_holder=old_header.copyright_holder if old_header else None,
+            ),
+            width=self.width,
+            prefer_inline=self.prefer_inline,
+        )
+
+        if old_header and not re.search(self.header_pattern, old_header.text()):
+            # The detected comment is apparently not an actual header.
+            old_header = None
+
+        return self.set_header(text, header_text, old_header=old_header)

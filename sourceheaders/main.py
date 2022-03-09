@@ -3,7 +3,6 @@
 import argparse
 import logging
 import pathlib
-import re
 from typing import TYPE_CHECKING, Optional
 
 from .config import Config
@@ -47,23 +46,7 @@ def main(argv: Optional["Sequence[str]"] = None) -> int:
         with path.open("r", encoding="utf-8") as fp:
             content = fp.read()
 
-        old_header = lang.find_header(content)
-        header_text = lang.format_header(
-            text=lang.get_header_text(
-                copyright_years=old_header.copyright_years if old_header else None,
-                copyright_holder=old_header.copyright_holder if old_header else None,
-            ),
-            width=lang.width,
-            prefer_inline=lang.prefer_inline,
-        )
-
-        if old_header and not re.search(lang.header_pattern, old_header.text()):
-            # The detected comment is apparently not an actual header.
-            old_header = None
-
-        (replaced, new_content) = lang.set_header(
-            content, header_text, old_header=old_header
-        )
+        (replaced, new_content) = lang.update_header(content)
 
         with path.open("w+", encoding="utf-8") as fp:
             fp.write(new_content)
