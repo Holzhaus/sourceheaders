@@ -1,0 +1,6 @@
+- id: sourceheaders
+  name: update source license headers
+  description: Adds and updates license headers in source files.
+  entry: sourceheaders
+  language: python
+  types: [text]
