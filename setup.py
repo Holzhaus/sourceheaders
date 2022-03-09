@@ -30,7 +30,7 @@ setup(
     packages=["sourceheaders"],
     install_requires=["toml"],
     package_data={
-        "sourceheaders": ["*.toml"],
+        "sourceheaders": ["*.toml", "licenses/*.txt"],
     },
     test_suite="tests",
     entry_points={

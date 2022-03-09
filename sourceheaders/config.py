@@ -2,6 +2,7 @@
 """ Configuration class. """
 import datetime
 import os.path
+import pathlib
 import re
 from typing import IO, Any
 
@@ -106,16 +107,51 @@ class Config:
         """
         Return the configured header text.
         """
+
+        if license_id := self.get("license"):
+            path = pathlib.Path(__file__).parent.joinpath("licenses", f"{license}.txt")
+            try:
+                fp = path.open(encoding="utf-8")
+            except FileNotFoundError as exc:
+                raise LookupError(
+                    f"License '{license_id}' not found, please configure `license_text`"
+                ) from exc
+
+            with fp:
+                license_text = fp.read()
+        else:
+            license_text = self.get("license_text")
+
+        spdx_license_identifier = (
+            self.get("spdx_license_identifier") or self.get("license") or "NOASSERTION"
+        )
+
         header_text = (
             self.get("header_template")
             .format(
                 year=datetime.date.today().year,
                 copyright_holder=self.get("copyright_holder", ""),
+                license_text=license_text,
             )
             .strip()
         )
 
-        if spdx_license_identifier := self.get("spdx_license_identifier"):
+        include_spdx_license_identifier = self.get(
+            "include_spdx_license_identifier", "auto"
+        )
+        if include_spdx_license_identifier == "always":
+            include_spdx_license_identifier = True
+        elif include_spdx_license_identifier == "never":
+            include_spdx_license_identifier = False
+        elif include_spdx_license_identifier == "auto":
+            include_spdx_license_identifier = spdx_license_identifier != "NOASSERTION"
+        else:
+            raise ValueError(
+                f"Invalid value {include_spdx_license_identifier:r} for "
+                "`spdx_license_identifier`, must be either 'always', 'never' or 'auto'"
+            )
+
+        if include_spdx_license_identifier:
             header_text += f"\n\nSPDX-License-Identifier: {spdx_license_identifier}"
 
         return header_text

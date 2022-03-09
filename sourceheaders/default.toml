@@ -4,10 +4,13 @@ header_pattern = "(?:Copyright|\\(c\\)|All rights reserved.|SPDX-License-Identif
 header_template = """\
 Copyright (c) {year} {copyright_holder}
 
-All rights reserved.\
+{license_text}
 """
-copyright_holder = ""
-spdx_license_identifier = ""
+#copyright_holder = "John Doe <john.doe@example.com>"
+#license = "MIT"
+#license_text = "Some custom license text."
+#spdx_license_identifier = "MIT"
+include_spdx_license_identifier = "auto"
 
 [language.c]
 extensions = [".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hxx"]
