@@ -30,10 +30,12 @@ def parse_prefixed_line(line: str, prefix: Optional[str]) -> Optional[str]:
     if prefix is None:
         return None
 
+    prefix = prefix.rstrip()
+
     if line.startswith(prefix):
         return line.removeprefix(prefix)
 
-    if line == prefix.strip():
+    if line == prefix:
         return ""
 
     return None
@@ -46,10 +48,12 @@ def parse_suffixed_line(line: str, suffix: Optional[str]) -> Optional[str]:
     if suffix is None:
         return None
 
+    suffix = suffix.rstrip()
+
     if line.endswith(suffix):
         return line.removesuffix(suffix)
 
-    if line == suffix.strip():
+    if line == suffix:
         return ""
 
     return None
