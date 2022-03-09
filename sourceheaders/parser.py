@@ -6,7 +6,21 @@ import dataclasses
 import itertools
 import re
 import textwrap
-from typing import Iterable, NamedTuple, Optional
+from typing import Any, Callable, Iterable, NamedTuple, Optional
+
+
+def takefrom(pred: Callable[[Any], bool], iterable: Iterable[Any]) -> Any:
+    """
+    Make an iterator that returns elements from the iterable once the predicate is true.
+
+    Counterpart to `itertools.takewhile`.
+    """
+    for item in iterable:
+        if pred(item):
+            yield item
+            break
+
+    yield from iterable
 
 
 def parse_prefixed_line(line: str, prefix: Optional[str]) -> Optional[str]:
@@ -239,8 +253,8 @@ class LanguageInfo:
             replaced = True
         else:
             old_lines1, old_lines2 = itertools.tee(old_lines)
-            lines_before = filter(self._should_skip_line, old_lines1)
-            lines_after = itertools.filterfalse(self._should_skip_line, old_lines2)
+            lines_before = itertools.takewhile(self._should_skip_line, old_lines1)
+            lines_after = takefrom(lambda x: not self._should_skip_line(x), old_lines2)
 
         header_lines = map(lambda line: line + "\n", header_lines)
         lines = itertools.chain(lines_before, header_lines, lines_after)
