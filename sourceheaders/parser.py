@@ -80,6 +80,8 @@ class HeaderComment(NamedTuple):
     is_block: bool
     linerange: LineRange
     lines: list[str]
+    copyright_years: Optional[str] = None
+    copyright_holder: Optional[str] = None
 
     def text(self) -> str:
         """Return the full text of the header comment."""
@@ -188,6 +190,7 @@ class LanguageInfo:
         header_is_block: Optional[bool] = None
         linerange: Optional[LineRange] = None
         lines: list[str] = []
+        copyright_match = None
         for lineno, is_block, line in self._find_header_lines(text):
             if header_is_block is None:
                 header_is_block = is_block
@@ -198,6 +201,14 @@ class LanguageInfo:
             assert lineno_end <= lineno
             linerange = LineRange(start=lineno_start, end=lineno)
             lines.append(line)
+            if not copyright_match:
+                copyright_match = re.search(
+                    r"(?:Copyright\s*)?(?:\(c\)\s*)?"
+                    r"(?P<years>(?:(?:\d{4}-)?\d{4},\s*)*(?:\d{4}-)?\d{4})\s+"
+                    r"(?P<copyright_holder>.+)",
+                    line,
+                    flags=(re.DOTALL | re.IGNORECASE),
+                )
 
         if header_is_block is None:
             return None
@@ -205,7 +216,19 @@ class LanguageInfo:
         assert linerange is not None
         assert linerange.start <= linerange.end
         assert len(lines) > 0
-        return HeaderComment(is_block=header_is_block, linerange=linerange, lines=lines)
+        if copyright_match:
+            copyright_years = copyright_match.group("years")
+            copyright_holder = copyright_match.group("copyright_holder")
+        else:
+            copyright_years = None
+            copyright_holder = None
+        return HeaderComment(
+            is_block=header_is_block,
+            linerange=linerange,
+            lines=lines,
+            copyright_years=copyright_years,
+            copyright_holder=copyright_holder,
+        )
 
     def format_header(
         self, text: str, width: int, prefer_inline: bool

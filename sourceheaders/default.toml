@@ -1,5 +1,7 @@
 [general]
 prefer_inline = false
+preserve_copyright_years = false
+preserve_copyright_holder = true
 header_pattern = "(?:Copyright|\\(c\\)|All rights reserved.|SPDX-License-Identifier:)"
 header_template = """\
 Copyright (c) {year} {copyright_holder}

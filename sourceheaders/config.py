@@ -3,7 +3,7 @@
 import datetime
 import importlib.resources
 import re
-from typing import IO, Any
+from typing import IO, Any, Optional
 
 import toml
 
@@ -104,7 +104,9 @@ class Config:
             skip_line=skip_line,
         )
 
-    def get_header_text(self) -> str:
+    def get_header_text(
+        self, copyright_years: Optional[str], copyright_holder: Optional[str]
+    ) -> str:
         """
         Return the configured header text.
         """
@@ -130,8 +132,8 @@ class Config:
         header_text = (
             self.get("header_template")
             .format(
-                year=datetime.date.today().year,
-                copyright_holder=self.get("copyright_holder", ""),
+                year=copyright_years or datetime.date.today().year,
+                copyright_holder=copyright_holder or self.get("copyright_holder", ""),
                 license_text=license_text,
             )
             .strip()

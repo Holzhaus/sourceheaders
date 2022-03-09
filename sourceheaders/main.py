@@ -48,7 +48,18 @@ def main(argv: Optional["Sequence[str]"] = None) -> int:
 
         old_header = lang.find_header(content)
         header_text = lang.format_header(
-            text=config.get_header_text(),
+            text=config.get_header_text(
+                copyright_years=(
+                    old_header.copyright_years
+                    if config.get("preserve_copyright_years") and old_header
+                    else None
+                ),
+                copyright_holder=(
+                    old_header.copyright_holder
+                    if config.get("preserve_copyright_holder") and old_header
+                    else None
+                ),
+            ),
             width=config.get("width", 70),
             prefer_inline=config.get("prefer_inline"),
         )
