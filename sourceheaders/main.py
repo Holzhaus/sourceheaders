@@ -46,12 +46,15 @@ def main(argv: Optional["Sequence[str]"] = None) -> int:
         with path.open("r", encoding="utf-8") as fp:
             content = fp.read()
 
+        old_header = lang.find_header(content)
         header_text = lang.format_header(
             text=config.get_header_text(),
             width=config.get("width", 70),
             prefer_inline=config.get("prefer_inline"),
         )
-        (replaced, new_content) = lang.set_header(content, header_text)
+        (replaced, new_content) = lang.set_header(
+            content, header_text, old_header=old_header
+        )
 
         with path.open("w+", encoding="utf-8") as fp:
             fp.write(new_content)

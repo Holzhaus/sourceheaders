@@ -240,14 +240,18 @@ class LanguageInfo:
             if self.block_comment.end:
                 yield self.block_comment.end.rstrip()
 
-    def set_header(self, text: str, header_lines: Iterable[str]) -> tuple[bool, str]:
+    def set_header(
+        self,
+        text: str,
+        header_lines: Iterable[str],
+        old_header: Optional[HeaderComment],
+    ) -> tuple[bool, str]:
         """
         Set the header comment of `text` to `header_text`.
         """
         old_lines = iter(text.splitlines(keepends=True))
 
         replaced = False
-        old_header = self.find_header(text)
         if old_header is not None:
             lines_before = itertools.islice(old_lines, old_header.linerange.start)
             skip = old_header.linerange.end - old_header.linerange.start + 1

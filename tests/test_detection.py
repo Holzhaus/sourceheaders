@@ -21,8 +21,11 @@ class HeaderDetectionTest(unittest.TestCase):
         lang = self.config.get_language(ext)
         content = textwrap.dedent(content.strip("\n"))
         expected = textwrap.dedent(expected.strip("\n"))
+        old_header = lang.find_header(content)
         replacement = lang.format_header(HEADER_TEXT, width=70, prefer_inline=True)
-        (_replaced, actual) = lang.set_header(content, replacement)
+        (_replaced, actual) = lang.set_header(
+            content, replacement, old_header=old_header
+        )
         self.assertEqual(expected, actual)
 
     def test_c_inline_single(self):
