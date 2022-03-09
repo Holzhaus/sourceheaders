@@ -3,6 +3,9 @@
 Classes and functions related to parsing source files.
 """
 import dataclasses
+import datetime
+import enum
+import importlib.resources
 import itertools
 import re
 import textwrap
@@ -59,6 +62,14 @@ def parse_suffixed_line(line: str, suffix: Optional[str]) -> Optional[str]:
     return None
 
 
+class IncludeSpdxIdentifierOption(enum.Enum):
+    """Determined if the SPDX-Identifier is included in the header."""
+
+    AUTO = "auto"
+    ALWAYS = "always"
+    NEVER = "never"
+
+
 class LineRange(NamedTuple):
     """Range of line numbers."""
 
@@ -92,9 +103,20 @@ class HeaderComment(NamedTuple):
 class LanguageInfo:
     """Defined a comment style."""
 
-    inline_comment: Optional[str] = None
-    block_comment: Optional[BlockComment] = None
-    skip_line: Optional[re.Pattern[str]] = None
+    inline_comment: Optional[str]
+    block_comment: Optional[BlockComment]
+    skip_line: Optional[re.Pattern[str]]
+    width: int
+    prefer_inline: bool
+    preserve_copyright_years: bool
+    preserve_copyright_holder: bool
+    header_pattern: re.Pattern[str]
+    header_template: str
+    copyright_holder: str
+    license: Optional[str]
+    license_text: Optional[str]
+    spdx_license_identifier: Optional[str]
+    include_spdx_license_identifier: IncludeSpdxIdentifierOption
 
     def _should_skip_line(self, line: str) -> bool:
         if not line.strip():
@@ -184,6 +206,62 @@ class LanguageInfo:
                     yield (i, is_block, content)
                 else:
                     return
+
+    def get_license_text(self) -> Optional[str]:
+        """Return the license text."""
+        if self.license:
+            ref = importlib.resources.files(__package__).joinpath(
+                f"licenses/{self.license}.txt"
+            )
+            try:
+                license_text = ref.read_text()
+            except FileNotFoundError as exc:
+                raise LookupError(
+                    f"License '{self.license}' not found, please configure "
+                    "`license_text` instead"
+                ) from exc
+            else:
+                return license_text
+
+        return self.license_text
+
+    def get_spdx_license_identifier(self) -> str:
+        """Return the SPDX license identifier."""
+        return self.spdx_license_identifier or self.license or "NOASSERTION"
+
+    def get_header_text(
+        self, copyright_years: Optional[str], copyright_holder: Optional[str]
+    ) -> str:
+        """
+        Return the configured header text.
+        """
+        if not self.preserve_copyright_years:
+            copyright_years = None
+
+        if not self.preserve_copyright_holder:
+            copyright_holder = None
+
+        header_text = self.header_template.format(
+            year=copyright_years or datetime.date.today().year,
+            copyright_holder=copyright_holder or self.copyright_holder or "",
+            license_text=self.get_license_text(),
+        ).strip()
+
+        spdx_license_identifier = self.get_spdx_license_identifier()
+        if self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.ALWAYS:
+            include_spdx_license_identifier = True
+        elif self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.NEVER:
+            include_spdx_license_identifier = False
+        else:
+            assert (
+                self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.AUTO
+            )
+            include_spdx_license_identifier = spdx_license_identifier != "NOASSERTION"
+
+        if include_spdx_license_identifier:
+            header_text += f"\n\nSPDX-License-Identifier: {spdx_license_identifier}"
+
+        return header_text
 
     def find_header(self, text: str) -> Optional[HeaderComment]:
         """Find header comment in `text` or return `None`."""

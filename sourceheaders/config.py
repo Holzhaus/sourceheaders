@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """ Configuration class. """
-import datetime
 import importlib.resources
 import re
-from typing import IO, Any, Optional
+from collections import ChainMap
+from typing import IO, Any
 
 import toml
 
-from .parser import BlockComment, LanguageInfo
+from .parser import BlockComment, IncludeSpdxIdentifierOption, LanguageInfo
 
 
 class Config:
@@ -72,7 +72,10 @@ class Config:
                 f"No language registered for extension {extension}"
             ) from exc
 
-        language_data = self._config["language"][language_name]
+        language_data = ChainMap(
+            self._config["language"][language_name],
+            self._config["general"],
+        )
 
         block_comment = None
         try:
@@ -96,72 +99,26 @@ class Config:
         except KeyError:
             skip_line = None
 
-        inline_comment = language_data["inline_comment"]
+        include_spdx_license_identifier_value = language_data.get(
+            "include_spdx_license_identifier", "auto"
+        )
+        include_spdx_license_identifier = IncludeSpdxIdentifierOption(
+            include_spdx_license_identifier_value
+        )
 
         return LanguageInfo(
             block_comment=block_comment,
-            inline_comment=inline_comment,
+            inline_comment=language_data["inline_comment"],
             skip_line=skip_line,
+            width=language_data.get("width", 70),
+            prefer_inline=bool(language_data["prefer_inline"]),
+            preserve_copyright_years=bool(language_data["preserve_copyright_years"]),
+            preserve_copyright_holder=bool(language_data["preserve_copyright_holder"]),
+            header_pattern=re.compile(language_data["header_pattern"]),
+            header_template=language_data["header_template"],
+            copyright_holder=language_data.get("copyright_holder", ""),
+            license=language_data.get("license"),
+            license_text=language_data.get("license_text"),
+            spdx_license_identifier=language_data.get("spdx_license_identifier"),
+            include_spdx_license_identifier=include_spdx_license_identifier,
         )
-
-    def get_header_text(
-        self, copyright_years: Optional[str], copyright_holder: Optional[str]
-    ) -> str:
-        """
-        Return the configured header text.
-        """
-
-        if license_id := self.get("license"):
-            ref = importlib.resources.files(__package__).joinpath(
-                f"licenses/{license_id}.txt"
-            )
-            try:
-                license_text = ref.read_text()
-            except FileNotFoundError as exc:
-                raise LookupError(
-                    f"License '{license_id}' not found, please configure "
-                    "`license_text` instead"
-                ) from exc
-        else:
-            license_text = self.get("license_text")
-
-        spdx_license_identifier = (
-            self.get("spdx_license_identifier") or self.get("license") or "NOASSERTION"
-        )
-
-        header_text = (
-            self.get("header_template")
-            .format(
-                year=copyright_years or datetime.date.today().year,
-                copyright_holder=copyright_holder or self.get("copyright_holder", ""),
-                license_text=license_text,
-            )
-            .strip()
-        )
-
-        include_spdx_license_identifier = self.get(
-            "include_spdx_license_identifier", "auto"
-        )
-        if include_spdx_license_identifier == "always":
-            include_spdx_license_identifier = True
-        elif include_spdx_license_identifier == "never":
-            include_spdx_license_identifier = False
-        elif include_spdx_license_identifier == "auto":
-            include_spdx_license_identifier = spdx_license_identifier != "NOASSERTION"
-        else:
-            raise ValueError(
-                f"Invalid value {include_spdx_license_identifier:r} for "
-                "`spdx_license_identifier`, must be either 'always', 'never' or 'auto'"
-            )
-
-        if include_spdx_license_identifier:
-            header_text += f"\n\nSPDX-License-Identifier: {spdx_license_identifier}"
-
-        return header_text
-
-    def get(self, option: str, fallback: Any = None) -> Any:
-        """Get a config value for the given key."""
-        try:
-            return self._config["general"][option]
-        except KeyError:
-            return fallback
