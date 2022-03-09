@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Command line interface. """
 import argparse
-import itertools
 import logging
 import pathlib
 import re
@@ -71,9 +70,6 @@ def main(argv: Optional["Sequence[str]"] = None) -> int:
         ):
             # The detected comment is apparently not an actual header.
             old_header = None
-            # We need to add an additional blank line after the new header to
-            # avoid that the new header is joined with the existing one.
-            header_text = itertools.chain(header_text, ("",))
 
         (replaced, new_content) = lang.set_header(
             content, header_text, old_header=old_header

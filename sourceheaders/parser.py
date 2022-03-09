@@ -284,6 +284,8 @@ class LanguageInfo:
             old_lines1, old_lines2 = itertools.tee(old_lines)
             lines_before = itertools.takewhile(self._should_skip_line, old_lines1)
             lines_after = takefrom(lambda x: not self._should_skip_line(x), old_lines2)
+            # Add a blank line after the new header comment.
+            header_lines = itertools.chain(header_lines, ("",))
 
         header_lines = map(lambda line: line + "\n", header_lines)
         lines = itertools.chain(lines_before, header_lines, lines_after)
