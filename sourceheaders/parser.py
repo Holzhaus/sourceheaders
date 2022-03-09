@@ -241,8 +241,6 @@ class LanguageInfo:
         Set the header comment of `text` to `header_text`.
         """
         old_lines = iter(text.splitlines(keepends=True))
-        if text.endswith("\n"):
-            old_lines = itertools.chain(old_lines, ("",))
 
         replaced = False
         old_header = self.find_header(text)
