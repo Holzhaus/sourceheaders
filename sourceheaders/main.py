@@ -40,7 +40,7 @@ def main(argv: Optional["Sequence[str]"] = None) -> int:
         try:
             lang = config.get_language(extension=path.suffix)
         except LookupError:
-            logger.warning("Failed to detect comment style for %s", path, exc_info=True)
+            logger.warning("Failed to detect comment style for %s", path)
             continue
 
         with path.open("r", encoding="utf-8") as fp:
