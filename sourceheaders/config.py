@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Configuration class. """
 import datetime
-import os.path
-import pathlib
+import importlib.resources
 import re
 from typing import IO, Any
 
@@ -28,7 +27,9 @@ class Config:
 
     def read_default(self):
         """Read the default config."""
-        self.read(os.path.join(os.path.dirname(__file__), "default.toml"))
+        ref = importlib.resources.files(__package__).joinpath("default.toml")
+        with ref.open("r", encoding="utf-8") as fp:
+            self.readfp(fp)
 
     def readfp(self, fp: IO[Any]):
         """Read a config file from file-like object `fp`."""
@@ -109,16 +110,16 @@ class Config:
         """
 
         if license_id := self.get("license"):
-            path = pathlib.Path(__file__).parent.joinpath("licenses", f"{license}.txt")
+            ref = importlib.resources.files(__package__).joinpath(
+                f"licenses/{license_id}.txt"
+            )
             try:
-                fp = path.open(encoding="utf-8")
+                license_text = ref.read_text()
             except FileNotFoundError as exc:
                 raise LookupError(
-                    f"License '{license_id}' not found, please configure `license_text`"
+                    f"License '{license_id}' not found, please configure "
+                    "`license_text` instead"
                 ) from exc
-
-            with fp:
-                license_text = fp.read()
         else:
             license_text = self.get("license_text")
 
