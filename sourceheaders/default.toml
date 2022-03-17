@@ -49,6 +49,7 @@ extensions = [".py"]
 block_comment = { start = '"""', end = '"""' }
 inline_comment = "# "
 skip_line = "^#!|^# +-\\*-|^# +(?:pylint|pyright|coding|encoding|type|flake8):"
+prefer_inline = true
 
 [language.ruby]
 extensions = [".rb"]
