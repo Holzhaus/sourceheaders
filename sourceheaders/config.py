@@ -108,7 +108,7 @@ class Config:
 
         return LanguageInfo(
             block_comment=block_comment,
-            inline_comment=language_data["inline_comment"],
+            inline_comment=language_data.get("inline_comment"),
             skip_line=skip_line,
             width=language_data.get("width", 70),
             prefer_inline=bool(language_data["prefer_inline"]),
