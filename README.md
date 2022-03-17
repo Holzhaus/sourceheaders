@@ -43,3 +43,11 @@ Add the following lines to your `.pre-commit-config.yaml`:
     hooks:
     -   id: sourceheaders
 ```
+
+Either specify a specific hook version in the `rev` field directly, or run the
+this command to automatically fill in the latest version:
+
+```shell-session
+$ pre-commit autoupdate --repo "https://github.com/Holzhaus/sourceheaders"
+Updating https://github.com/Holzhaus/sourceheaders ... updating  -> <latest-version>.
+```
