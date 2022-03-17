@@ -314,7 +314,8 @@ class LanguageInfo:
         """Return `text` formatted as a header comment."""
         if prefer_inline and self.inline_comment or not self.block_comment:
             is_block = False
-            line_prefix = self.inline_comment or ""
+            assert self.inline_comment is not None
+            line_prefix = self.inline_comment
         else:
             is_block = True
             line_prefix = self.block_comment.line or ""
