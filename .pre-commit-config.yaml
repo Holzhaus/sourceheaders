@@ -34,7 +34,7 @@ repos:
     - id: sort-simple-yaml
     - id: trailing-whitespace
 - repo: https://github.com/kumaraditya303/mirrors-pyright
-  rev: "v1.1.226"
+  rev: "v1.1.230"
   hooks:
   - id: pyright
 - repo: https://github.com/PyCQA/isort
@@ -46,7 +46,7 @@ repos:
   hooks:
   - id: pylint
 - repo: https://github.com/PyCQA/bandit
-  rev: "1.7.3"
+  rev: "1.7.4"
   hooks:
   - id: bandit
     args: ["-c", "pyproject.toml", "--"]
