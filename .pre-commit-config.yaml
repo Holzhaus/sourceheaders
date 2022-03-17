@@ -67,6 +67,10 @@ repos:
   rev: v0.4.0
   hooks:
   - id: markdownlint-cli2
+- repo: https://github.com/Holzhaus/sourceheaders
+  rev: "dc83be40c31531f199677bfc27564c0a09c4ab74"
+  hooks:
+  - id: sourceheaders
 - repo: https://github.com/jorisroovers/gitlint
   rev: "v0.17.0"
   hooks:
