@@ -67,6 +67,5 @@ inline_comment = "# "
 
 [language.xml]
 extensions = [".xml", ".xhtml"]
-block_comment = { start = "<!--", line = "  --", end = "  -->" }
-inline_comment = "// "
+block_comment = { start = "<!-- ", line = "  -- ", end = "  -->" }
 skip_line = "^\\s*<\\?xml.*\\?>"
