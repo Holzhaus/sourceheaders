@@ -38,13 +38,13 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     classifiers=[
-        "Environment :: Console"
-        "Intended Audience :: Developers"
+        "Environment :: Console",
+        "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
-        "Software Development :: Libraries :: Python Modules",
-        "Software Development :: Quality Assurance",
+        "Topic :: Software Development :: Pre-processors",
+        "Topic :: Software Development :: Quality Assurance",
     ],
     author="Jan Holthuis",
     author_email="holthuis.jan@googlemail.com",
@@ -53,6 +53,7 @@ setup(
     license="MIT",
     packages=["sourceheaders"],
     install_requires=["toml"],
+    python_requires=">=3.10",
     package_data={
         "sourceheaders": ["*.toml", "licenses/*.txt"],
     },
