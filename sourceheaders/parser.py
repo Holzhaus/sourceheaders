@@ -127,7 +127,7 @@ class BlockComment(NamedTuple):
     end: Optional[str]
 
 
-class HeaderComment(NamedTuple):
+class DetectedHeaderComment(NamedTuple):
     """A parsed file header comment."""
 
     is_block: bool
@@ -271,7 +271,7 @@ class LanguageInfo:
             or DUMMY_SPDX_LICENSE_IDENTIFIER
         )
 
-    def get_header_text(self, old_header: Optional[HeaderComment]) -> str:
+    def get_header_text(self, old_header: Optional[DetectedHeaderComment]) -> str:
         """
         Return the configured header text.
         """
@@ -339,7 +339,7 @@ class LanguageInfo:
 
         return header_text
 
-    def find_header(self, text: str) -> Optional[HeaderComment]:
+    def find_header(self, text: str) -> Optional[DetectedHeaderComment]:
         """Find header comment in `text` or return `None`."""
         header_is_block: Optional[bool] = None
         linerange: Optional[LineRange] = None
@@ -387,7 +387,7 @@ class LanguageInfo:
             spdx_license_identifier = license_match.group("license")
         else:
             spdx_license_identifier = None
-        return HeaderComment(
+        return DetectedHeaderComment(
             is_block=header_is_block,
             linerange=linerange,
             lines=lines,
@@ -434,7 +434,7 @@ class LanguageInfo:
         self,
         text: str,
         header_lines: Iterable[str],
-        old_header: Optional[HeaderComment],
+        old_header: Optional[DetectedHeaderComment],
     ) -> tuple[bool, str]:
         """
         Set the header comment of `text` to `header_text`.
