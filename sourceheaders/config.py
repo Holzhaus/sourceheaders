@@ -27,11 +27,63 @@
 import importlib.resources
 import re
 from collections import ChainMap
-from typing import IO, Any
+from typing import IO, Any, Mapping
 
 import toml
 
 from .parser import BlockComment, IncludeSpdxIdentifierOption, LanguageInfo
+
+
+def get_language_from_mapping(language_data: Mapping[str, Any]) -> LanguageInfo:
+    """
+    Return a `LanguageInfo` object for the given mapping.
+    """
+    block_comment = None
+    try:
+        block_comment_data = language_data["block_comment"]
+    except KeyError:
+        pass
+    else:
+        if block_comment_data is not None:
+            block_comment_start = block_comment_data.get("start")
+            block_comment_line = block_comment_data.get("line")
+            block_comment_end = block_comment_data.get("end")
+            if block_comment_start or block_comment_line or block_comment_end:
+                block_comment = BlockComment(
+                    start=block_comment_start,
+                    line=block_comment_line,
+                    end=block_comment_end,
+                )
+
+    try:
+        skip_line = re.compile(language_data["skip_line"])
+    except KeyError:
+        skip_line = None
+
+    include_spdx_license_identifier_value = language_data.get(
+        "include_spdx_license_identifier", "auto"
+    )
+    include_spdx_license_identifier = IncludeSpdxIdentifierOption(
+        include_spdx_license_identifier_value
+    )
+
+    return LanguageInfo(
+        block_comment=block_comment,
+        inline_comment=language_data.get("inline_comment"),
+        skip_line=skip_line,
+        width=language_data.get("width", 70),
+        prefer_inline=bool(language_data["prefer_inline"]),
+        preserve_copyright_years=bool(language_data["preserve_copyright_years"]),
+        preserve_copyright_holder=bool(language_data["preserve_copyright_holder"]),
+        preserve_license=bool(language_data["preserve_license"]),
+        header_pattern=re.compile(language_data["header_pattern"]),
+        header_template=language_data["header_template"],
+        copyright_holder=language_data.get("copyright_holder", ""),
+        license=language_data.get("license"),
+        license_text=language_data.get("license_text"),
+        spdx_license_identifier=language_data.get("spdx_license_identifier"),
+        include_spdx_license_identifier=include_spdx_license_identifier,
+    )
 
 
 class Config:
@@ -101,49 +153,4 @@ class Config:
             self._config["general"],
         )
 
-        block_comment = None
-        try:
-            block_comment_data = language_data["block_comment"]
-        except KeyError:
-            pass
-        else:
-            if block_comment_data is not None:
-                block_comment_start = block_comment_data.get("start")
-                block_comment_line = block_comment_data.get("line")
-                block_comment_end = block_comment_data.get("end")
-                if block_comment_start or block_comment_line or block_comment_end:
-                    block_comment = BlockComment(
-                        start=block_comment_start,
-                        line=block_comment_line,
-                        end=block_comment_end,
-                    )
-
-        try:
-            skip_line = re.compile(language_data["skip_line"])
-        except KeyError:
-            skip_line = None
-
-        include_spdx_license_identifier_value = language_data.get(
-            "include_spdx_license_identifier", "auto"
-        )
-        include_spdx_license_identifier = IncludeSpdxIdentifierOption(
-            include_spdx_license_identifier_value
-        )
-
-        return LanguageInfo(
-            block_comment=block_comment,
-            inline_comment=language_data.get("inline_comment"),
-            skip_line=skip_line,
-            width=language_data.get("width", 70),
-            prefer_inline=bool(language_data["prefer_inline"]),
-            preserve_copyright_years=bool(language_data["preserve_copyright_years"]),
-            preserve_copyright_holder=bool(language_data["preserve_copyright_holder"]),
-            preserve_license=bool(language_data["preserve_license"]),
-            header_pattern=re.compile(language_data["header_pattern"]),
-            header_template=language_data["header_template"],
-            copyright_holder=language_data.get("copyright_holder", ""),
-            license=language_data.get("license"),
-            license_text=language_data.get("license_text"),
-            spdx_license_identifier=language_data.get("spdx_license_identifier"),
-            include_spdx_license_identifier=include_spdx_license_identifier,
-        )
+        return get_language_from_mapping(language_data)
