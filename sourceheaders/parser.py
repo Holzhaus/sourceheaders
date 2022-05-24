@@ -302,7 +302,7 @@ class LanguageInfo:
                 # Note that this can only happen if we did find an old header,
                 # so we `old_header` can't be `None`.
                 assert old_header is not None
-                header_text = textwrap.dedent(old_header.text())
+                header_text = textwrap.dedent(old_header.text()).strip("\n")
         else:
             license_text = self.get_license_text()
 
