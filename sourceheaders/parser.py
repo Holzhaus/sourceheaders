@@ -105,7 +105,7 @@ def get_license_text_from_spdx(spdx_license_identifier: str) -> str:
 
 
 class IncludeSpdxIdentifierOption(enum.Enum):
-    """Determined if the SPDX-Identifier is included in the header."""
+    """Determines if the SPDX-Identifier is included in the header."""
 
     AUTO = "auto"
     ALWAYS = "always"
