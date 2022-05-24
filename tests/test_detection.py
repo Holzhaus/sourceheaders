@@ -24,6 +24,12 @@
 #
 # SPDX-License-Identifier: MIT
 
+# Unfortunately, pyright does not consider `TestCase.assertIsNotNone(foo)` to
+# be a None check like `assert foo is not None` (see
+# https://github.com/microsoft/pyright/issues/2007 for details).
+# Hence, we need to disable optional member access reporting here:
+# pyright: reportOptionalMemberAccess=false
+
 import textwrap
 import unittest
 
@@ -41,141 +47,113 @@ class HeaderDetectionTest(unittest.TestCase):
         self.config = Config()
         self.config.read_default()
 
-    def replace(self, content: str, expected: str, ext: str):
+    def detect_header(self, content: str, ext: str):
         lang = self.config.get_language(ext)
         content = textwrap.dedent(content.strip("\n"))
-        expected = textwrap.dedent(expected.strip("\n"))
-        old_header = lang.find_header(content)
-        replacement = lang.format_header(HEADER_TEXT, width=70, prefer_inline=True)
-        (_replaced, actual) = lang.set_header(
-            content, replacement, old_header=old_header
-        )
-        self.assertEqual(expected, actual)
+        return lang.find_header(content)
 
-    def test_c_inline_single(self):
-        before = """
-        // This is the original.
-
-        int main() {}
-        """
-        after = """
-        // This is the replacement.
+    def test_no_copyright(self):
+        content = """
+        // Here goes the application title
         //
-        // It has two paragraphs, one of which contains a very long line that
-        // needs to be split into into multiple lines.
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
 
         int main() {}
         """
-        self.replace(before, after, ".c")
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertIsNone(header.copyright_years)
+        self.assertIsNone(header.copyright_holder)
 
-    def test_c_inline_multi(self):
-        before = """
+    def test_copyright(self):
+        content = """
+        // Here goes the application title
         //
-        // This is the original.
+        // Copyright (c) 2022 Boaty McBoatface and Friends.
         //
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
 
         int main() {}
         """
-        after = """
-        // This is the replacement.
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertEqual(header.copyright_years, "2022")
+        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+
+    def test_copyright_with_multiple_years(self):
+        content = """
+        // Here goes the application title
         //
-        // It has two paragraphs, one of which contains a very long line that
-        // needs to be split into into multiple lines.
-
-        int main() {}
-        """
-        self.replace(before, after, ".c")
-
-    def test_c_block(self):
-        before = """
-        /*
-         * This is the original.
-         */
-
-        int main() {}
-        """
-        after = """
-        // This is the replacement.
+        // Copyright (c) 2017-2022 Boaty McBoatface and Friends.
         //
-        // It has two paragraphs, one of which contains a very long line that
-        // needs to be split into into multiple lines.
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
 
         int main() {}
         """
-        self.replace(before, after, ".c")
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertEqual(header.copyright_years, "2017-2022")
+        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
 
-    def test_python_inline_single(self):
-        before = """
-        # This is the original.
+    def test_copyright_without_c_parens(self):
+        content = """
+        // Here goes the application title
+        //
+        // Copyright 2022 Boaty McBoatface and Friends.
+        //
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
 
-        if __name__ == "__main__":
-            pass
+        int main() {}
         """
-        after = """
-        # This is the replacement.
-        #
-        # It has two paragraphs, one of which contains a very long line that
-        # needs to be split into into multiple lines.
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertEqual(header.copyright_years, "2022")
+        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
 
-        if __name__ == "__main__":
-            pass
+    def test_copyright_without_copyright_term(self):
+        content = """
+        // Here goes the application title
+        //
+        // (C) 2022 Boaty McBoatface and Friends.
+        //
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
+
+        int main() {}
         """
-        self.replace(before, after, ".py")
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertEqual(header.copyright_years, "2022")
+        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
 
-    def test_python_inline_multi(self):
-        before = """
-        #
-        # This is the original.
-        #
+    def test_copyright_with_copyright_symbol(self):
+        content = """
+        // Here goes the application title
+        //
+        // Copyright ©2022 Boaty McBoatface and Friends.
+        //
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
 
-        if __name__ == "__main__":
-            pass
+        int main() {}
         """
-        after = """
-        # This is the replacement.
-        #
-        # It has two paragraphs, one of which contains a very long line that
-        # needs to be split into into multiple lines.
-
-        if __name__ == "__main__":
-            pass
-        """
-        self.replace(before, after, ".py")
-
-    def test_python_block_single(self):
-        before = '''
-        """ This is the original. """
-
-        if __name__ == "__main__":
-            pass
-        '''
-        after = """
-        # This is the replacement.
-        #
-        # It has two paragraphs, one of which contains a very long line that
-        # needs to be split into into multiple lines.
-
-        if __name__ == "__main__":
-            pass
-        """
-        self.replace(before, after, ".py")
-
-    def test_python_multi(self):
-        before = '''
-        """
-        This is the original.
-        """
-
-        if __name__ == "__main__":
-            pass
-        '''
-        after = """
-        # This is the replacement.
-        #
-        # It has two paragraphs, one of which contains a very long line that
-        # needs to be split into into multiple lines.
-
-        if __name__ == "__main__":
-            pass
-        """
-        self.replace(before, after, ".py")
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertEqual(header.copyright_years, "2022")
+        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
