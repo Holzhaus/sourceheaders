@@ -36,7 +36,7 @@ It has two paragraphs, one of which contains a very long line that needs to be s
 """.strip()
 
 
-class HeaderDetectionTest(unittest.TestCase):
+class HeaderFormattingTest(unittest.TestCase):
     def setUp(self):
         self.config = Config()
         self.config.read_default()
