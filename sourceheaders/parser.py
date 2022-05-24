@@ -35,6 +35,8 @@ import re
 import textwrap
 from typing import Any, Callable, Iterable, NamedTuple, Optional
 
+DUMMY_SPDX_LICENSE_IDENTIFIER = "NOASSERTION"
+
 
 def takefrom(pred: Callable[[Any], bool], iterable: Iterable[Any]) -> Any:
     """
@@ -233,25 +235,32 @@ class LanguageInfo:
 
     def get_license_text(self) -> Optional[str]:
         """Return the license text."""
-        if self.license:
-            ref = importlib.resources.files(__package__).joinpath(
-                f"licenses/{self.license}.txt"
-            )
-            try:
-                license_text = ref.read_text()
-            except FileNotFoundError as exc:
-                raise LookupError(
-                    f"License '{self.license}' not found, please configure "
-                    "`license_text` instead"
-                ) from exc
-            else:
-                return license_text
+        spdx_license_identifier = self.get_spdx_license_identifier()
+        if not spdx_license_identifier:
+            return self.license_text
 
-        return self.license_text
+        if spdx_license_identifier == DUMMY_SPDX_LICENSE_IDENTIFIER:
+            return self.license_text
+
+        ref = importlib.resources.files(__package__).joinpath(
+            f"licenses/{spdx_license_identifier}.txt"
+        )
+        try:
+            license_text = ref.read_text()
+        except FileNotFoundError as exc:
+            raise LookupError(
+                f"License '{spdx_license_identifier}' not found, please configure "
+                "`license_text` instead"
+            ) from exc
+        return license_text
 
     def get_spdx_license_identifier(self) -> str:
         """Return the SPDX license identifier."""
-        return self.spdx_license_identifier or self.license or "NOASSERTION"
+        return (
+            self.spdx_license_identifier
+            or self.license
+            or DUMMY_SPDX_LICENSE_IDENTIFIER
+        )
 
     def get_header_text(
         self, copyright_years: Optional[str], copyright_holder: Optional[str]
@@ -280,7 +289,9 @@ class LanguageInfo:
             assert (
                 self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.AUTO
             )
-            include_spdx_license_identifier = spdx_license_identifier != "NOASSERTION"
+            include_spdx_license_identifier = (
+                spdx_license_identifier != DUMMY_SPDX_LICENSE_IDENTIFIER
+            )
 
         if include_spdx_license_identifier:
             header_text += f"\n\nSPDX-License-Identifier: {spdx_license_identifier}"
