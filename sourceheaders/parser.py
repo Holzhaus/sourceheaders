@@ -26,6 +26,7 @@
 """
 Classes and functions related to parsing source files.
 """
+import copy
 import dataclasses
 import datetime
 import enum
@@ -127,19 +128,41 @@ class BlockComment(NamedTuple):
     end: Optional[str]
 
 
+@dataclasses.dataclass
+class CopyrightEntry:
+    """Single line of copyright information."""
+
+    year: str
+    holder: str
+
+
 class DetectedHeaderComment(NamedTuple):
     """A parsed file header comment."""
 
     is_block: bool
     linerange: LineRange
     lines: list[str]
-    copyright_years: Optional[str] = None
-    copyright_holder: Optional[str] = None
-    spdx_license_identifier: Optional[str] = None
+    copyright: list[CopyrightEntry]
+    spdx_license_identifier: Optional[str]
 
     def text(self) -> str:
         """Return the full text of the header comment."""
         return "\n".join(self.lines)
+
+
+@dataclasses.dataclass
+class Header:
+    """A file header comment."""
+
+    head: str = ""
+    copyright: list[CopyrightEntry] = dataclasses.field(default_factory=list)
+    text: str = ""
+    tags: dict[str, str] = dataclasses.field(default_factory=dict)
+    foot: str = ""
+
+    def is_empty(self) -> bool:
+        """Returns True if the header does not contain anything."""
+        return not any((self.head, self.copyright, self.text, self.tags, self.foot))
 
 
 @dataclasses.dataclass
@@ -155,7 +178,9 @@ class LanguageInfo:
     preserve_copyright_holder: bool
     preserve_license: bool
     header_pattern: re.Pattern[str]
-    header_template: str
+    header_head: str
+    header_foot: str
+    copyright_template: str
     copyright_holder: str
     license: Optional[str]
     license_text: Optional[str]
@@ -251,14 +276,11 @@ class LanguageInfo:
                 else:
                     return
 
-    def get_license_text(self) -> Optional[str]:
+    def get_license_text(self) -> str:
         """Return the license text."""
         spdx_license_identifier = self.get_spdx_license_identifier()
 
-        if not spdx_license_identifier:
-            return self.license_text
-
-        if spdx_license_identifier == DUMMY_SPDX_LICENSE_IDENTIFIER:
+        if self.license_text is not None:
             return self.license_text
 
         return get_license_text_from_spdx(spdx_license_identifier)
@@ -271,17 +293,12 @@ class LanguageInfo:
             or DUMMY_SPDX_LICENSE_IDENTIFIER
         )
 
-    def get_header_text(self, old_header: Optional[DetectedHeaderComment]) -> str:
+    def get_header(self, old_header: Optional[DetectedHeaderComment]) -> Header:
         """
         Return the configured header text.
         """
-        copyright_years = old_header.copyright_years if old_header else None
-        if not self.preserve_copyright_years:
-            copyright_years = None
 
-        copyright_holder = old_header.copyright_holder if old_header else None
-        if not self.preserve_copyright_holder:
-            copyright_holder = None
+        header = Header()
 
         spdx_license_identifier = (
             old_header.spdx_license_identifier if old_header else None
@@ -289,11 +306,9 @@ class LanguageInfo:
         if not self.preserve_license:
             spdx_license_identifier = None
 
-        header_text = None
-        license_text = None
         if spdx_license_identifier is not None:
             try:
-                license_text = get_license_text_from_spdx(spdx_license_identifier)
+                header.text = get_license_text_from_spdx(spdx_license_identifier)
             except LookupError:
                 # We want to preserve the license, but the license text can not
                 # be determined from the SPDX-License-Identifier. In that case,
@@ -302,21 +317,51 @@ class LanguageInfo:
                 # Note that this can only happen if we did find an old header,
                 # so we `old_header` can't be `None`.
                 assert old_header is not None
-                header_text = textwrap.dedent(old_header.text()).strip("\n")
+                header.text = textwrap.dedent(old_header.text()).strip("\n")
+                return header
         else:
-            license_text = self.get_license_text()
+            header.text = self.get_license_text()
 
-        if not header_text:
-            assert license_text is not None
-            header_text = self.header_template.format(
-                year=copyright_years or datetime.date.today().year,
-                copyright_holder=copyright_holder or self.copyright_holder or "",
-                license_text=license_text,
-            ).strip()
+        year = datetime.date.today().year
+
+        if old_header and old_header.copyright:
+            header.copyright.extend(copy.copy(c) for c in old_header.copyright)
+
+            if len(header.copyright) == 1:
+                if not self.preserve_copyright_holder:
+                    copyright_entry = header.copyright[0]
+                    copyright_entry.holder = self.copyright_holder
+                    header.copyright = [copyright_entry]
+                elif not self.preserve_copyright_years:
+                    copyright_entry = header.copyright[0]
+                    copyright_entry.year = str(year)
+                    header.copyright = [copyright_entry]
+
+        if not self.preserve_copyright_years:
+            for copyright_entry in reversed(header.copyright):
+                if copyright_entry.holder != self.copyright_holder:
+                    continue
+                if not copyright_entry.year:
+                    copyright_entry.year = str(year)
+                else:
+                    if matchobj := re.search(
+                        r"^(\d{4})-(\d{4})$", copyright_entry.year
+                    ):
+                        copyright_entry.year = f"{matchobj.group(1)}-{year}"
+                    elif matchobj := re.match(r"^(\d{4})$", copyright_entry.year):
+                        copyright_entry.year = str(year)
+                    else:
+                        copyright_entry.year += f", {year}"
+
+        if not header.copyright:
+            header.copyright.append(
+                CopyrightEntry(year=str(year), holder=self.copyright_holder)
+            )
 
         spdx_license_identifier = (
             spdx_license_identifier or self.get_spdx_license_identifier()
         )
+
         if self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.ALWAYS:
             include_spdx_license_identifier = True
         elif self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.NEVER:
@@ -330,22 +375,20 @@ class LanguageInfo:
             )
 
         if include_spdx_license_identifier:
-            spdx_string = f"SPDX-License-Identifier: {spdx_license_identifier}"
+            header.tags["SPDX-License-Identifier"] = spdx_license_identifier
 
-            # The header text may already contain the SPDX-License-Identifier
-            # string if the old header text was copied.
-            if spdx_string not in header_text:
-                header_text += f"\n\n{spdx_string}"
+        header.head = self.header_head
+        header.foot = self.header_foot
 
-        return header_text
+        return header
 
     def find_header(self, text: str) -> Optional[DetectedHeaderComment]:
         """Find header comment in `text` or return `None`."""
         header_is_block: Optional[bool] = None
         linerange: Optional[LineRange] = None
         lines: list[str] = []
-        copyright_match = None
         license_match = None
+        copyright_entries: list[CopyrightEntry] = []
         for lineno, is_block, line in self._find_header_lines(text):
             if header_is_block is None:
                 header_is_block = is_block
@@ -356,14 +399,21 @@ class LanguageInfo:
             assert lineno_end <= lineno
             linerange = LineRange(start=lineno_start, end=lineno)
             lines.append(line)
-            if not copyright_match:
-                copyright_match = re.search(
-                    r"(?:Copyright\s*)?(?:(?:\(c\)|©)\s*)?"
-                    r"(?P<years>(?:(?:\d{4}-)?\d{4},\s*)*(?:\d{4}-)?\d{4})\s+"
-                    r"(?P<copyright_holder>.+)",
-                    line,
-                    flags=(re.DOTALL | re.IGNORECASE),
+
+            if matchobj := re.search(
+                r"(?:Copyright\s*)?(?:(?:\(c\)|©)\s*)?"
+                r"(?P<year>(?:(?:\d{4}-)?\d{4},\s*)*(?:\d{4}-)?\d{4})\s+"
+                r"(?P<copyright_holder>.+)",
+                line,
+                flags=(re.DOTALL | re.IGNORECASE),
+            ):
+                copyright_entries.append(
+                    CopyrightEntry(
+                        year=matchobj.group("year"),
+                        holder=matchobj.group("copyright_holder"),
+                    )
                 )
+
             if not license_match:
                 license_match = re.search(
                     r"SPDX-License-Identifier:\s*(?P<license>\S+)",
@@ -377,12 +427,6 @@ class LanguageInfo:
         assert linerange is not None
         assert linerange.start <= linerange.end
         assert len(lines) > 0
-        if copyright_match:
-            copyright_years = copyright_match.group("years")
-            copyright_holder = copyright_match.group("copyright_holder")
-        else:
-            copyright_years = None
-            copyright_holder = None
         if license_match:
             spdx_license_identifier = license_match.group("license")
         else:
@@ -391,15 +435,17 @@ class LanguageInfo:
             is_block=header_is_block,
             linerange=linerange,
             lines=lines,
-            copyright_years=copyright_years,
-            copyright_holder=copyright_holder,
+            copyright=copyright_entries,
             spdx_license_identifier=spdx_license_identifier,
         )
 
     def format_header(
-        self, text: str, width: int, prefer_inline: bool
+        self, header: Header, width: int, prefer_inline: bool
     ) -> Iterable[str]:
         """Return `text` formatted as a header comment."""
+        if header.is_empty():
+            return
+
         if prefer_inline and self.inline_comment or not self.block_comment:
             is_block = False
             assert self.inline_comment is not None
@@ -411,19 +457,65 @@ class LanguageInfo:
             if self.block_comment.start:
                 yield self.block_comment.start.rstrip()
 
-        paragraphs = text.split("\n\n")
-        for i, paragraph in enumerate(paragraphs, start=1):
-            yield from (
-                line.rstrip()
-                for line in textwrap.wrap(
-                    paragraph,
-                    width=width,
-                    initial_indent=line_prefix,
-                    subsequent_indent=line_prefix,
+        def format_text(text: str) -> Iterable[str]:
+            paragraphs = text.split("\n\n")
+
+            for i, paragraph in enumerate(paragraphs, start=1):
+                yield from (
+                    line.rstrip()
+                    for line in textwrap.wrap(
+                        paragraph,
+                        width=width,
+                        initial_indent=line_prefix,
+                        subsequent_indent=line_prefix,
+                    )
                 )
+                if i < len(paragraphs):
+                    yield line_prefix.rstrip()
+
+        if header.head:
+            yield from format_text(header.head)
+
+        if header.head and any(
+            (header.copyright, header.text, header.tags, header.foot)
+        ):
+            yield line_prefix.rstrip()
+
+        if header.copyright:
+            for copyright_entry in header.copyright:
+                yield from format_text(
+                    self.copyright_template.format(
+                        year=copyright_entry.year,
+                        copyright_holder=copyright_entry.holder,
+                    )
+                )
+
+        if any((header.head, header.copyright)) and any(
+            (header.text, header.tags, header.foot)
+        ):
+            yield line_prefix.rstrip()
+
+        if header.text:
+            yield from format_text(header.text)
+
+        if any((header.head, header.copyright, header.text)) and any(
+            (header.tags, header.foot)
+        ):
+            yield line_prefix.rstrip()
+
+        if header.tags:
+            yield from (
+                f"{line_prefix}{key}: {value}" for key, value in header.tags.items()
             )
-            if i < len(paragraphs):
-                yield line_prefix.rstrip()
+
+        if (
+            any((header.head, header.copyright, header.text, header.tags))
+            and header.foot
+        ):
+            yield line_prefix.rstrip()
+
+        if header.foot:
+            yield from format_text(header.foot)
 
         if is_block:
             assert self.block_comment is not None
@@ -437,7 +529,7 @@ class LanguageInfo:
         old_header: Optional[DetectedHeaderComment],
     ) -> tuple[bool, str]:
         """
-        Set the header comment of `text` to `header_text`.
+        Set the header comment of `text` to `header_lines`.
         """
         old_lines = iter(text.splitlines(keepends=True))
 
@@ -464,7 +556,7 @@ class LanguageInfo:
         """
         old_header = self.find_header(text)
         header_text = self.format_header(
-            text=self.get_header_text(old_header),
+            header=self.get_header(old_header),
             width=self.width,
             prefer_inline=self.prefer_inline,
         )
