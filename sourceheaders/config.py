@@ -138,6 +138,7 @@ class Config:
             prefer_inline=bool(language_data["prefer_inline"]),
             preserve_copyright_years=bool(language_data["preserve_copyright_years"]),
             preserve_copyright_holder=bool(language_data["preserve_copyright_holder"]),
+            preserve_license=bool(language_data["preserve_license"]),
             header_pattern=re.compile(language_data["header_pattern"]),
             header_template=language_data["header_template"],
             copyright_holder=language_data.get("copyright_holder", ""),

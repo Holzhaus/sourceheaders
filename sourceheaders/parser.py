@@ -119,6 +119,7 @@ class HeaderComment(NamedTuple):
     lines: list[str]
     copyright_years: Optional[str] = None
     copyright_holder: Optional[str] = None
+    spdx_license_identifier: Optional[str] = None
 
     def text(self) -> str:
         """Return the full text of the header comment."""
@@ -136,6 +137,7 @@ class LanguageInfo:
     prefer_inline: bool
     preserve_copyright_years: bool
     preserve_copyright_holder: bool
+    preserve_license: bool
     header_pattern: re.Pattern[str]
     header_template: str
     copyright_holder: str
@@ -233,9 +235,12 @@ class LanguageInfo:
                 else:
                     return
 
-    def get_license_text(self) -> Optional[str]:
+    def get_license_text(self, spdx_license_identifier: Optional[str]) -> Optional[str]:
         """Return the license text."""
-        spdx_license_identifier = self.get_spdx_license_identifier()
+        spdx_license_identifier = (
+            spdx_license_identifier or self.get_spdx_license_identifier()
+        )
+
         if not spdx_license_identifier:
             return self.license_text
 
@@ -263,7 +268,10 @@ class LanguageInfo:
         )
 
     def get_header_text(
-        self, copyright_years: Optional[str], copyright_holder: Optional[str]
+        self,
+        copyright_years: Optional[str],
+        copyright_holder: Optional[str],
+        spdx_license_identifier: Optional[str],
     ) -> str:
         """
         Return the configured header text.
@@ -274,13 +282,18 @@ class LanguageInfo:
         if not self.preserve_copyright_holder:
             copyright_holder = None
 
+        if not self.preserve_license:
+            spdx_license_identifier = None
+
         header_text = self.header_template.format(
             year=copyright_years or datetime.date.today().year,
             copyright_holder=copyright_holder or self.copyright_holder or "",
-            license_text=self.get_license_text(),
+            license_text=self.get_license_text(spdx_license_identifier),
         ).strip()
 
-        spdx_license_identifier = self.get_spdx_license_identifier()
+        spdx_license_identifier = (
+            spdx_license_identifier or self.get_spdx_license_identifier()
+        )
         if self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.ALWAYS:
             include_spdx_license_identifier = True
         elif self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.NEVER:
@@ -304,6 +317,7 @@ class LanguageInfo:
         linerange: Optional[LineRange] = None
         lines: list[str] = []
         copyright_match = None
+        license_match = None
         for lineno, is_block, line in self._find_header_lines(text):
             if header_is_block is None:
                 header_is_block = is_block
@@ -316,11 +330,17 @@ class LanguageInfo:
             lines.append(line)
             if not copyright_match:
                 copyright_match = re.search(
-                    r"(?:Copyright\s*)?(?:\(c\)\s*)?"
+                    r"(?:Copyright\s*)?(?:(?:\(c\)|©)\s*)?"
                     r"(?P<years>(?:(?:\d{4}-)?\d{4},\s*)*(?:\d{4}-)?\d{4})\s+"
                     r"(?P<copyright_holder>.+)",
                     line,
                     flags=(re.DOTALL | re.IGNORECASE),
+                )
+            if not license_match:
+                license_match = re.search(
+                    r"SPDX-License-Identifier:\s*(?P<license>\S+)",
+                    line,
+                    flags=re.IGNORECASE,
                 )
 
         if header_is_block is None:
@@ -335,12 +355,17 @@ class LanguageInfo:
         else:
             copyright_years = None
             copyright_holder = None
+        if license_match:
+            spdx_license_identifier = license_match.group("license")
+        else:
+            spdx_license_identifier = None
         return HeaderComment(
             is_block=header_is_block,
             linerange=linerange,
             lines=lines,
             copyright_years=copyright_years,
             copyright_holder=copyright_holder,
+            spdx_license_identifier=spdx_license_identifier,
         )
 
     def format_header(
@@ -414,6 +439,9 @@ class LanguageInfo:
             text=self.get_header_text(
                 copyright_years=old_header.copyright_years if old_header else None,
                 copyright_holder=old_header.copyright_holder if old_header else None,
+                spdx_license_identifier=old_header.spdx_license_identifier
+                if old_header
+                else None,
             ),
             width=self.width,
             prefer_inline=self.prefer_inline,
