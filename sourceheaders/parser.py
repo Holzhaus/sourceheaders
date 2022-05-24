@@ -88,8 +88,24 @@ def parse_suffixed_line(line: str, suffix: Optional[str]) -> Optional[str]:
     return None
 
 
+def get_license_text_from_spdx(spdx_license_identifier: str) -> str:
+    """
+    Returns license text for the given SPDX-License-Identifier.
+
+    If the license text is unknown, a `LookupError` is raised.
+    """
+    ref = importlib.resources.files(__package__).joinpath(
+        f"licenses/{spdx_license_identifier}.txt"
+    )
+    try:
+        license_text = ref.read_text()
+    except FileNotFoundError as exc:
+        raise LookupError(f"License '{spdx_license_identifier}' not found") from exc
+    return license_text
+
+
 class IncludeSpdxIdentifierOption(enum.Enum):
-    """Determined if the SPDX-Identifier is included in the header."""
+    """Determines if the SPDX-Identifier is included in the header."""
 
     AUTO = "auto"
     ALWAYS = "always"
@@ -235,11 +251,9 @@ class LanguageInfo:
                 else:
                     return
 
-    def get_license_text(self, spdx_license_identifier: Optional[str]) -> Optional[str]:
+    def get_license_text(self) -> Optional[str]:
         """Return the license text."""
-        spdx_license_identifier = (
-            spdx_license_identifier or self.get_spdx_license_identifier()
-        )
+        spdx_license_identifier = self.get_spdx_license_identifier()
 
         if not spdx_license_identifier:
             return self.license_text
@@ -247,17 +261,7 @@ class LanguageInfo:
         if spdx_license_identifier == DUMMY_SPDX_LICENSE_IDENTIFIER:
             return self.license_text
 
-        ref = importlib.resources.files(__package__).joinpath(
-            f"licenses/{spdx_license_identifier}.txt"
-        )
-        try:
-            license_text = ref.read_text()
-        except FileNotFoundError as exc:
-            raise LookupError(
-                f"License '{spdx_license_identifier}' not found, please configure "
-                "`license_text` instead"
-            ) from exc
-        return license_text
+        return get_license_text_from_spdx(spdx_license_identifier)
 
     def get_spdx_license_identifier(self) -> str:
         """Return the SPDX license identifier."""
@@ -267,29 +271,48 @@ class LanguageInfo:
             or DUMMY_SPDX_LICENSE_IDENTIFIER
         )
 
-    def get_header_text(
-        self,
-        copyright_years: Optional[str],
-        copyright_holder: Optional[str],
-        spdx_license_identifier: Optional[str],
-    ) -> str:
+    def get_header_text(self, old_header: Optional[HeaderComment]) -> str:
         """
         Return the configured header text.
         """
+        copyright_years = old_header.copyright_years if old_header else None
         if not self.preserve_copyright_years:
             copyright_years = None
 
+        copyright_holder = old_header.copyright_holder if old_header else None
         if not self.preserve_copyright_holder:
             copyright_holder = None
 
+        spdx_license_identifier = (
+            old_header.spdx_license_identifier if old_header else None
+        )
         if not self.preserve_license:
             spdx_license_identifier = None
 
-        header_text = self.header_template.format(
-            year=copyright_years or datetime.date.today().year,
-            copyright_holder=copyright_holder or self.copyright_holder or "",
-            license_text=self.get_license_text(spdx_license_identifier),
-        ).strip()
+        header_text = None
+        license_text = None
+        if spdx_license_identifier is not None:
+            try:
+                license_text = get_license_text_from_spdx(spdx_license_identifier)
+            except LookupError:
+                # We want to preserve the license, but the license text can not
+                # be determined from the SPDX-License-Identifier. In that case,
+                # our only option is to preserve whole header text.
+                #
+                # Note that this can only happen if we did find an old header,
+                # so we `old_header` can't be `None`.
+                assert old_header is not None
+                header_text = textwrap.dedent(old_header.text())
+        else:
+            license_text = self.get_license_text()
+
+        if not header_text:
+            assert license_text is not None
+            header_text = self.header_template.format(
+                year=copyright_years or datetime.date.today().year,
+                copyright_holder=copyright_holder or self.copyright_holder or "",
+                license_text=license_text,
+            ).strip()
 
         spdx_license_identifier = (
             spdx_license_identifier or self.get_spdx_license_identifier()
@@ -307,7 +330,12 @@ class LanguageInfo:
             )
 
         if include_spdx_license_identifier:
-            header_text += f"\n\nSPDX-License-Identifier: {spdx_license_identifier}"
+            spdx_string = f"SPDX-License-Identifier: {spdx_license_identifier}"
+
+            # The header text may already contain the SPDX-License-Identifier
+            # string if the old header text was copied.
+            if spdx_string not in header_text:
+                header_text += f"\n\n{spdx_string}"
 
         return header_text
 
@@ -436,13 +464,7 @@ class LanguageInfo:
         """
         old_header = self.find_header(text)
         header_text = self.format_header(
-            text=self.get_header_text(
-                copyright_years=old_header.copyright_years if old_header else None,
-                copyright_holder=old_header.copyright_holder if old_header else None,
-                spdx_license_identifier=old_header.spdx_license_identifier
-                if old_header
-                else None,
-            ),
+            text=self.get_header_text(old_header),
             width=self.width,
             prefer_inline=self.prefer_inline,
         )

@@ -231,3 +231,23 @@ class HeaderFormattingTest(unittest.TestCase):
         lang.preserve_copyright_years = True
         lang.preserve_license = True
         self.replace(before, after, lang)
+
+    def test_preserve_all_with_custom_license(self):
+        before = """
+        // Copyright 2020 Boaty McBoatface and Friends.
+        //
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
+        //
+        // SPDX-License-Identifier: UNLICENSED
+
+        int main() {}
+        """
+        after = before
+        lang = copy.copy(self.lang)
+        lang.preserve_copyright_holder = True
+        lang.preserve_copyright_years = True
+        lang.preserve_license = True
+        self.replace(before, after, lang)
