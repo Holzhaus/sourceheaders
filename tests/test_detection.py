@@ -157,3 +157,20 @@ class HeaderDetectionTest(unittest.TestCase):
         self.assertIsNotNone(header)
         self.assertEqual(header.copyright_years, "2022")
         self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+
+    def test_spdx_license_identifier(self):
+        content = """
+        // Here goes the application title
+        //
+        // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+        // ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+        // aliquip ex ea commodo consequat.
+        //
+        // SPDX-License-Identifier: MPL-2.0
+
+        int main() {}
+        """
+        header = self.detect_header(content, ".c")
+        self.assertIsNotNone(header)
+        self.assertEqual(header.spdx_license_identifier, "MPL-2.0")
