@@ -183,4 +183,4 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.spdx_license_identifier, "MPL-2.0")
+        self.assertEqual(header.tags["SPDX-License-Identifier"], "MPL-2.0")

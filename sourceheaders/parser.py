@@ -143,7 +143,7 @@ class DetectedHeaderComment(NamedTuple):
     linerange: LineRange
     lines: list[str]
     copyright: list[CopyrightEntry]
-    spdx_license_identifier: Optional[str]
+    tags: dict[str, str]
 
     def text(self) -> str:
         """Return the full text of the header comment."""
@@ -300,30 +300,14 @@ class LanguageInfo:
 
         header = Header()
 
-        spdx_license_identifier = (
-            old_header.spdx_license_identifier if old_header else None
-        )
+        if old_header:
+            header.tags = old_header.tags.copy()
+
+        spdx_license_identifier = header.tags.pop("SPDX-License-Identifier", None)
         if not self.preserve_license:
             spdx_license_identifier = None
 
-        if spdx_license_identifier is not None:
-            try:
-                header.text = get_license_text_from_spdx(spdx_license_identifier)
-            except LookupError:
-                # We want to preserve the license, but the license text can not
-                # be determined from the SPDX-License-Identifier. In that case,
-                # our only option is to preserve whole header text.
-                #
-                # Note that this can only happen if we did find an old header,
-                # so we `old_header` can't be `None`.
-                assert old_header is not None
-                header.text = textwrap.dedent(old_header.text()).strip("\n")
-                return header
-        else:
-            header.text = self.get_license_text()
-
         year = datetime.date.today().year
-
         if old_header and old_header.copyright:
             header.copyright.extend(copy.copy(c) for c in old_header.copyright)
 
@@ -362,20 +346,35 @@ class LanguageInfo:
             spdx_license_identifier or self.get_spdx_license_identifier()
         )
 
-        if self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.ALWAYS:
-            include_spdx_license_identifier = True
-        elif self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.NEVER:
-            include_spdx_license_identifier = False
+        if (
+            self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.ALWAYS
+            or (
+                self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.AUTO
+                and spdx_license_identifier != DUMMY_SPDX_LICENSE_IDENTIFIER
+            )
+        ):
+            header.tags["SPDX-License-Identifier"] = spdx_license_identifier
         else:
             assert (
-                self.include_spdx_license_identifier == IncludeSpdxIdentifierOption.AUTO
-            )
-            include_spdx_license_identifier = (
-                spdx_license_identifier != DUMMY_SPDX_LICENSE_IDENTIFIER
+                self.include_spdx_license_identifier
+                == IncludeSpdxIdentifierOption.NEVER
             )
 
-        if include_spdx_license_identifier:
-            header.tags["SPDX-License-Identifier"] = spdx_license_identifier
+        if spdx_license_identifier is not None:
+            try:
+                header.text = get_license_text_from_spdx(spdx_license_identifier)
+            except LookupError:
+                # We want to preserve the license, but the license text can not
+                # be determined from the SPDX-License-Identifier. In that case,
+                # our only option is to preserve whole header text.
+                #
+                # Note that this can only happen if we did find an old header,
+                # so we `old_header` can't be `None`.
+                assert old_header is not None
+                header.text = textwrap.dedent(old_header.text()).strip("\n")
+                return header
+        else:
+            header.text = self.get_license_text()
 
         header.head = self.header_head
         header.foot = self.header_foot
@@ -387,8 +386,8 @@ class LanguageInfo:
         header_is_block: Optional[bool] = None
         linerange: Optional[LineRange] = None
         lines: list[str] = []
-        license_match = None
         copyright_entries: list[CopyrightEntry] = []
+        tags: dict[str, str] = {}
         for lineno, is_block, line in self._find_header_lines(text):
             if header_is_block is None:
                 header_is_block = is_block
@@ -398,7 +397,6 @@ class LanguageInfo:
             assert lineno_start <= lineno_end
             assert lineno_end <= lineno
             linerange = LineRange(start=lineno_start, end=lineno)
-            lines.append(line)
 
             if matchobj := re.search(
                 r"(?:Copyright\s*)?(?:(?:\(c\)|©)\s*)?"
@@ -413,13 +411,17 @@ class LanguageInfo:
                         holder=matchobj.group("copyright_holder"),
                     )
                 )
+                continue
 
-            if not license_match:
-                license_match = re.search(
-                    r"SPDX-License-Identifier:\s*(?P<license>\S+)",
-                    line,
-                    flags=re.IGNORECASE,
-                )
+            if matchobj := re.search(
+                r"SPDX-License-Identifier:\s*(?P<license>\S+)",
+                line,
+                flags=re.IGNORECASE,
+            ):
+                tags["SPDX-License-Identifier"] = matchobj.group("license")
+                continue
+
+            lines.append(line)
 
         if header_is_block is None:
             return None
@@ -427,16 +429,12 @@ class LanguageInfo:
         assert linerange is not None
         assert linerange.start <= linerange.end
         assert len(lines) > 0
-        if license_match:
-            spdx_license_identifier = license_match.group("license")
-        else:
-            spdx_license_identifier = None
         return DetectedHeaderComment(
             is_block=header_is_block,
             linerange=linerange,
             lines=lines,
             copyright=copyright_entries,
-            spdx_license_identifier=spdx_license_identifier,
+            tags=tags,
         )
 
     def format_header(
@@ -561,7 +559,9 @@ class LanguageInfo:
             prefer_inline=self.prefer_inline,
         )
 
-        if old_header and not re.search(self.header_pattern, old_header.text()):
+        if old_header and not (
+            old_header.copyright or re.search(self.header_pattern, old_header.text())
+        ):
             # The detected comment is apparently not an actual header.
             old_header = None
 
