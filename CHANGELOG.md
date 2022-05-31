@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.2] - 2022-05-31
+
+### Bug Fixes
+
+- Preserve whole header text when license text is unknown
+- Strip superfluous newlines when preserving entire header
+
+### Build
+
+- Switch to declarative `setup.cfg`
+- Bump version to v0.0.2
+
+### Features
+
+- Add support for detecting/preserving existing SPDX-License-IDs
+- Add initial support for multiple copyright lines
+- Parse copyright and tags when preserving license text
+
+### Refactor
+
+- Move LanguageInfo instantiation into separate function
+
+### Testing
+
+- Rename misleading unit test class
+- Add tests for detection existing license headers
+- Add unit tests for replacing headers
+
 ## [0.0.1] - 2022-03-19
 
 ### Bug Fixes
