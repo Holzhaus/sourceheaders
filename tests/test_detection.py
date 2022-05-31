@@ -34,6 +34,7 @@ import textwrap
 import unittest
 
 from sourceheaders.config import Config
+from sourceheaders.parser import CopyrightEntry
 
 HEADER_TEXT = """
 This is the replacement.
@@ -65,8 +66,7 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertIsNone(header.copyright_years)
-        self.assertIsNone(header.copyright_holder)
+        self.assertEqual(len(header.copyright), 0)
 
     def test_copyright(self):
         content = """
@@ -83,8 +83,10 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.copyright_years, "2022")
-        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+        self.assertEqual(
+            header.copyright,
+            [CopyrightEntry(year="2022", holder="Boaty McBoatface and Friends.")],
+        )
 
     def test_copyright_with_multiple_years(self):
         content = """
@@ -101,8 +103,10 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.copyright_years, "2017-2022")
-        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+        self.assertEqual(
+            header.copyright,
+            [CopyrightEntry(year="2017-2022", holder="Boaty McBoatface and Friends.")],
+        )
 
     def test_copyright_without_c_parens(self):
         content = """
@@ -119,8 +123,10 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.copyright_years, "2022")
-        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+        self.assertEqual(
+            header.copyright,
+            [CopyrightEntry(year="2022", holder="Boaty McBoatface and Friends.")],
+        )
 
     def test_copyright_without_copyright_term(self):
         content = """
@@ -137,8 +143,10 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.copyright_years, "2022")
-        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+        self.assertEqual(
+            header.copyright,
+            [CopyrightEntry(year="2022", holder="Boaty McBoatface and Friends.")],
+        )
 
     def test_copyright_with_copyright_symbol(self):
         content = """
@@ -155,8 +163,10 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.copyright_years, "2022")
-        self.assertEqual(header.copyright_holder, "Boaty McBoatface and Friends.")
+        self.assertEqual(
+            header.copyright,
+            [CopyrightEntry(year="2022", holder="Boaty McBoatface and Friends.")],
+        )
 
     def test_spdx_license_identifier(self):
         content = """
@@ -173,4 +183,4 @@ class HeaderDetectionTest(unittest.TestCase):
         """
         header = self.detect_header(content, ".c")
         self.assertIsNotNone(header)
-        self.assertEqual(header.spdx_license_identifier, "MPL-2.0")
+        self.assertEqual(header.tags["SPDX-License-Identifier"], "MPL-2.0")

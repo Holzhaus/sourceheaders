@@ -234,7 +234,7 @@ class HeaderFormattingTest(unittest.TestCase):
 
     def test_preserve_all_with_custom_license(self):
         before = """
-        // Copyright 2020 Boaty McBoatface and Friends.
+        // Copyright (c) 2020 Boaty McBoatface and Friends.
         //
         // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
         // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
@@ -268,7 +268,7 @@ class HeaderFormattingTest(unittest.TestCase):
         int main() {}
         """
         after = """
-        // Copyright 2020 Boaty McBoatface and Friends.
+        // Copyright (c) 2020 Boaty McBoatface and Friends.
         //
         // Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
         // eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim

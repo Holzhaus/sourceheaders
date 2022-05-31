@@ -4,11 +4,9 @@ preserve_copyright_years = false
 preserve_copyright_holder = true
 preserve_license = true
 header_pattern = "(?:Copyright|\\(c\\)|All rights reserved.|SPDX-License-Identifier:)"
-header_template = """\
-Copyright (c) {year} {copyright_holder}
-
-{license_text}
-"""
+header_head = ""
+header_foot = ""
+copyright_template = "Copyright (c) {year} {copyright_holder}"
 #copyright_holder = "John Doe <john.doe@example.com>"
 #license = "MIT"
 #license_text = "Some custom license text."
