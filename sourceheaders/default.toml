@@ -64,6 +64,7 @@ inline_comment = "// "
 [language.shell]
 extensions = [".sh", ".bash", ".csh", ".zsh", ".fish"]
 inline_comment = "# "
+skip_line = "^#!"
 
 [language.xml]
 extensions = [".xml", ".xhtml"]
