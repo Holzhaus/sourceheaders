@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.3] - 2022-08-05
+
+### Bug Fixes
+
+- Skip shebang line in shell scripts
+
 ## [0.0.2] - 2022-05-31
 
 ### Bug Fixes
