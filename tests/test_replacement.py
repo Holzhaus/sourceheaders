@@ -25,6 +25,7 @@
 # SPDX-License-Identifier: MIT
 
 import copy
+import datetime
 import textwrap
 import unittest
 
@@ -35,6 +36,7 @@ This is the replacement.
 
 It has two paragraphs, one of which contains a very long line that needs to be split into into multiple lines.
 """.strip()
+YEAR = datetime.date.today().year
 
 
 class HeaderFormattingTest(unittest.TestCase):
@@ -68,8 +70,8 @@ class HeaderFormattingTest(unittest.TestCase):
 
         int main() {}
         """
-        after = """
-        // Copyright (c) 2022 Jan Holthuis
+        after = f"""
+        // Copyright (c) {YEAR} Jan Holthuis
         //
         // This program is free software: you can redistribute it and/or modify
         // it under the terms of the GNU General Public License as published by
@@ -86,7 +88,7 @@ class HeaderFormattingTest(unittest.TestCase):
         //
         // SPDX-License-Identifier: GPL-3.0-only
 
-        int main() {}
+        int main() {{}}
         """
         lang = copy.copy(self.lang)
         lang.preserve_copyright_holder = False
@@ -106,8 +108,8 @@ class HeaderFormattingTest(unittest.TestCase):
 
         int main() {}
         """
-        after = """
-        // Copyright (c) 2022 Boaty McBoatface and Friends.
+        after = f"""
+        // Copyright (c) {YEAR} Boaty McBoatface and Friends.
         //
         // This program is free software: you can redistribute it and/or modify
         // it under the terms of the GNU General Public License as published by
@@ -124,7 +126,7 @@ class HeaderFormattingTest(unittest.TestCase):
         //
         // SPDX-License-Identifier: GPL-3.0-only
 
-        int main() {}
+        int main() {{}}
         """
         lang = copy.copy(self.lang)
         lang.preserve_copyright_holder = True
@@ -184,8 +186,8 @@ class HeaderFormattingTest(unittest.TestCase):
 
         int main() {}
         """
-        after = """
-        // Copyright (c) 2022 Jan Holthuis
+        after = f"""
+        // Copyright (c) {YEAR} Jan Holthuis
         //
         // This Source Code Form is subject to the terms of the Mozilla Public
         // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -193,7 +195,7 @@ class HeaderFormattingTest(unittest.TestCase):
         //
         // SPDX-License-Identifier: MPL-2.0
 
-        int main() {}
+        int main() {{}}
         """
         lang = copy.copy(self.lang)
         lang.preserve_copyright_holder = False
