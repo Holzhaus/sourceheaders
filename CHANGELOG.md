@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4] - 2023-01-01
+
+### Bug Fixes
+
+- Fix year range updates
+
+### Testing
+
+- Fix year constant in tests
+- Add test to check year range updates
+
 ## [0.0.3] - 2022-08-05
 
 ### Bug Fixes
