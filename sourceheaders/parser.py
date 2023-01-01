@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2022 Jan Holthuis <jan.holthuis@rub.de>
+# Copyright (c) 2022-2023 Jan Holthuis <jan.holthuis@rub.de>
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -316,14 +316,13 @@ class LanguageInfo:
                     copyright_entry = header.copyright[0]
                     copyright_entry.holder = self.copyright_holder
                     header.copyright = [copyright_entry]
-                elif not self.preserve_copyright_years:
-                    copyright_entry = header.copyright[0]
-                    copyright_entry.year = str(year)
-                    header.copyright = [copyright_entry]
 
         if not self.preserve_copyright_years:
             for copyright_entry in reversed(header.copyright):
-                if copyright_entry.holder != self.copyright_holder:
+                if (
+                    copyright_entry.holder != self.copyright_holder
+                    and len(header.copyright) != 1
+                ):
                     continue
                 if not copyright_entry.year:
                     copyright_entry.year = str(year)

@@ -9,7 +9,7 @@ skips = ["B101"]
 profile = "black"
 
 [tool.pylint.messages_control]
-disable = "C0330,C0326,R0902,R0912"
+disable = "R0902,R0912"
 
 [tool.pylint.format]
 good-names = "i,j,fp"

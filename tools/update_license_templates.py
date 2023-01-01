@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2022 Jan Holthuis <jan.holthuis@rub.de>
+# Copyright (c) 2022-2023 Jan Holthuis <jan.holthuis@rub.de>
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -30,8 +30,6 @@ them to text files.
 
 import argparse
 import json
-import os
-import os.path
 import pathlib
 import sys
 from typing import Iterable, Optional, Sequence
@@ -95,10 +93,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             continue
 
         print(f"[   OK   ] {license_id}")
-        with open(
-            os.path.join(args.output_dir, f"{license_id}.txt"),
-            mode="w",
-            encoding="utf-8",
+        with args.output_dir.joinpath(f"{license_id}.txt").open(
+            mode="w", encoding="utf-8"
         ) as fp:
             fp.write(license_header)
 
