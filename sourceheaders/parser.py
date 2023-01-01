@@ -316,14 +316,13 @@ class LanguageInfo:
                     copyright_entry = header.copyright[0]
                     copyright_entry.holder = self.copyright_holder
                     header.copyright = [copyright_entry]
-                elif not self.preserve_copyright_years:
-                    copyright_entry = header.copyright[0]
-                    copyright_entry.year = str(year)
-                    header.copyright = [copyright_entry]
 
         if not self.preserve_copyright_years:
             for copyright_entry in reversed(header.copyright):
-                if copyright_entry.holder != self.copyright_holder:
+                if (
+                    copyright_entry.holder != self.copyright_holder
+                    and len(header.copyright) != 1
+                ):
                     continue
                 if not copyright_entry.year:
                     copyright_entry.year = str(year)
